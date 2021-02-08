@@ -2,6 +2,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+from io import BytesIO
 
 import pafy #retrive metadata 
 import cv2
@@ -33,8 +34,13 @@ def struc_sim(target, img):
 	param: target: numpy array image in "RGB"
 	param: img: numpy array image in "RGB"
 	'''
+
+	# Downsizing the target - see how can I keep the aspect Ratio the same 
+	target = cv2.resize(target, (406, 720), interpolation=cv2.INTER_AREA)
+	
 	# target image size
 	target_dim = (target.shape[1], target.shape[0])
+	#st.write(f'{traget_dim}')
 	# resize img to match target size
 	img = cv2.resize(img, target_dim, interpolation=cv2.INTER_AREA)
 	# convert target image to gray scale
@@ -61,35 +67,38 @@ st.sidebar.write("# Load image from local")
 img_target = st.sidebar.file_uploader(label="Upload image", 
 	type=["jpg", "jpeg", "png"],
 	key="i")
-
+	
 # if user upload a target image
 if img_target is not None:
 	img_target = Image.open(img_target)
+
 	# convert target image to RGB and put in numpy array format.
 	img_target_RGB = np.array(img_target.convert("RGB"))
 
-	# get video frames from youtube directely from YouTube based on the tags such as COC *** future updated ***
-	# video URL for selected videos only use two videos for demos. 
-	url = ["https://www.youtube.com/watch?v=VvL5Q7YVyWM","https://www.youtube.com/watch?v=VvL5Q7YVyWM"]
+
+	# convert image to RGB
+	#"https://www.youtube.com/watch?v=r3iIy5m2Emc",
+	url = ["https://www.youtube.com/watch?v=VvL5Q7YVyWM","https://www.youtube.com/watch?v=J-V8fffpgvw"]
 
 	# loop through video links
 	for url in url:
 		frame_generator, num_frames = get_video_frames(url)
 		st.write(f"Video url: {url} \n\n **Total in video: {num_frames} frames**")
 
+
 		# LOOP to search for match frame
-		threshold = 0.65
+		threshold = 0.40
 		found = False
 		for i in range(num_frames):
 			# current frame
 			_, frame = frame_generator.read()
-			# convert current frame from BGR to RGB format
+			#convert current frame from BGR to RGB format
 			#frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 			# Future release How to extract one frame of a video every N seconds to an image?
 			# check if the current frame is similar to the target above a threshold
 			# Here I only check every 10 frames to save time.
-			#if i%20==0 and struc_sim(img_target_RGB, frame) >= threshold:
-			if struc_sim(img_target_RGB, frame) >= threshold:
+			if i%60==0 and struc_sim(img_target_RGB, frame) >= threshold:
+			#if struc_sim(img_target_RGB, frame) >= threshold:
 				# show the ssim value
 				st.write(f"Video url: {url} \n\n **Total in video: {num_frames} frames**")
 				st.text(f'**Found match !**\
@@ -99,7 +108,6 @@ if img_target is not None:
 				# plot the target and frame side by side.
 				show_2_imgs(img_target_RGB, frame)
 				break
-			i +=60 # i.e. at 30 fps, this advances one second
 		if found == True:
 			break
 		else:
